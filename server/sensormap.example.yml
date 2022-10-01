@@ -1,0 +1,8 @@
+sensors:
+  - id: sensor1
+    scripts:
+      - example.script1.sh
+  - id: sensor2
+    scripts:
+      - example.script2.sh
+      - example.script3.sh
