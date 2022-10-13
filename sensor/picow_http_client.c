@@ -10,8 +10,16 @@
 #include "pico/stdlib.h"
 #include "pico/cyw43_arch.h"
 
+#include "hardware/gpio.h"
+#include "hardware/adc.h"
+
 #include "lwip/pbuf.h"
 #include "lwip/tcp.h"
+
+#define VOLTAGE_LIMIT 2.0f
+#define SLEEP_DURATION_MS 300
+
+#define SENSOR_PIN 26
 
 #if !defined(HTTP_SERVER_IP)
 #error HTTP_SERVER_IP not defined
@@ -174,7 +182,14 @@ void make_request(void) {
 }
 
 int main() {
+    bool is_sensor_detected = false;
+
     stdio_init_all();
+    adc_init();
+
+    adc_gpio_init(SENSOR_PIN);
+    adc_select_input(0);
+
 
     if (cyw43_arch_init()) {
         DEBUG_printf("failed to initialise\n");
@@ -191,8 +206,27 @@ int main() {
         printf("Connected.\n");
     }
     while (true) {
-        sleep_ms(5000);
-        make_request();
+        // 12-bit conversion, assume max value == ADC_VREF == 3.3 V
+        const float conversion_factor = 3.3f / (1 << 12);
+
+        uint16_t result = adc_read();
+        float voltage = result * conversion_factor;
+        
+        printf("Raw value: 0x%03x, voltage: %f V\n", result, voltage);
+        
+        if (voltage < VOLTAGE_LIMIT && !is_sensor_detected) {
+            printf("Sensor detected. Sending request to server...\n");
+            make_request();
+            printf("Request sent to %s\n", HTTP_SERVER_IP);
+            is_sensor_detected = true;
+        } else if (voltage >= VOLTAGE_LIMIT && is_sensor_detected) {
+            printf("Sensor back to normal. Sending request to server...\n");
+            make_request();
+            printf("Request sent to %s\n", HTTP_SERVER_IP);
+            is_sensor_detected = false;
+        }
+        
+        sleep_ms(SLEEP_DURATION_MS);
     }
     cyw43_arch_deinit();
     return 0;
