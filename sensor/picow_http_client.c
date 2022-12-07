@@ -49,7 +49,6 @@ int main() {
     adc_gpio_init(SENSOR_PIN);
     adc_select_input(0);
 
-
     if (cyw43_arch_init()) {
         printf("failed to initialise\n");
         return 1;
@@ -60,8 +59,7 @@ int main() {
     if (cyw43_arch_wifi_connect_timeout_ms(WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK, 30000)) {
         printf("failed to connect.\n");
         return 1;
-    }
-    else {
+    } else {
         printf("Connected.\n");
     }
     while (true) {
@@ -70,12 +68,12 @@ int main() {
 
         uint16_t result = adc_read();
         float voltage = result * conversion_factor;
-        
+
         printf("Raw value: 0x%03x, voltage: %f V\n", result, voltage);
-        
+
         if (voltage < VOLTAGE_LIMIT && !is_sensor_detected) {
             printf("Sensor detected. Sending request to server...\n");
-            printf("Request: %s\n", activated_request->complete_request);        
+            printf("Request: %s\n", activated_request->complete_request);
             http_client_request(HTTP_SERVER_IP, TCP_PORT, activated_request);
             printf("Request sent to %s\n", HTTP_SERVER_IP);
             is_sensor_detected = true;
@@ -86,7 +84,7 @@ int main() {
             printf("Request sent to %s\n", HTTP_SERVER_IP);
             is_sensor_detected = false;
         }
-        
+
         sleep_ms(SLEEP_DURATION_MS);
     }
     cyw43_arch_deinit();
